@@ -711,7 +711,191 @@ elif page == "Model Performance":
 
 
 # ---------- Inventory Intelligence ----------
+
+# ---------- Inventory Intelligence ----------
 elif page == "Inventory Intelligence":
+    hero(
+        "OPERATIONS / WORKSPACE 04",
+        "Inventory intelligence",
+        "Explore store-level reorder points, safety stock, order quantities and inventory risk signals.",
+    )
+
+    inventory = load_csv("day17_order_quantity.csv")
+    safety = load_csv("day16_safety_stock_reorder_point.csv")
+    risk = load_csv("day18_inventory_risk.csv")
+    risk_summary = load_csv("day18_inventory_risk_summary.csv")
+
+    if inventory is None:
+        show_missing("day17_order_quantity.csv")
+        st.stop()
+
+    required = {
+        "Store",
+        "Average_Daily_Sales",
+        "Safety_Stock",
+        "Reorder_Point",
+        "Target_Stock",
+        "Recommended_Order_Quantity",
+    }
+
+    if not required.issubset(inventory.columns):
+        st.error(
+            f"Inventory data is missing columns: "
+            f"{sorted(required - set(inventory.columns))}"
+        )
+        st.stop()
+
+    inventory = inventory.copy()
+    inventory["Store"] = pd.to_numeric(
+        inventory["Store"], errors="coerce"
+    )
+    inventory = inventory.dropna(subset=["Store"])
+
+    st.markdown("#### Filter inventory recommendations")
+
+    f1, f2 = st.columns([1, 1])
+
+    with f1:
+        stores = sorted(inventory["Store"].unique())
+        selected_store = st.selectbox(
+            "Select store",
+            ["All stores"] + stores,
+            key="inventory_dashboard_store",
+        )
+
+    with f2:
+        sort_by = st.selectbox(
+            "Rank stores by",
+            [
+                "Recommended_Order_Quantity",
+                "Reorder_Point",
+                "Safety_Stock",
+                "Average_Daily_Sales",
+            ],
+            format_func=lambda c: c.replace("_", " "),
+        )
+
+    if selected_store == "All stores":
+        filtered = inventory.copy()
+    else:
+        filtered = inventory[
+            inventory["Store"] == selected_store
+        ].copy()
+
+    filtered = filtered.sort_values(sort_by, ascending=False)
+
+    total_stores = inventory["Store"].nunique()
+    avg_order = filtered["Recommended_Order_Quantity"].mean()
+    total_order_proxy = filtered["Recommended_Order_Quantity"].sum()
+    avg_safety = filtered["Safety_Stock"].mean()
+    avg_reorder = filtered["Reorder_Point"].mean()
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Stores in view", f"{len(filtered):,}")
+    k2.metric("Avg. recommended order", f"{avg_order:,.0f}")
+    k3.metric("Avg. safety stock", f"{avg_safety:,.0f}")
+    k4.metric("Avg. reorder point", f"{avg_reorder:,.0f}")
+
+    st.caption(
+        f"Inventory dataset covers {total_stores:,} stores. "
+        "Figures below are sales-based proxies, not verified physical units."
+    )
+
+    section(
+        "Largest order recommendations",
+        "Compare the stores with the highest calculated order quantities.",
+    )
+
+    top_n = st.slider(
+        "Number of stores to display",
+        min_value=5,
+        max_value=min(30, len(filtered)),
+        value=min(10, len(filtered)),
+        key="inventory_top_n",
+    )
+
+    top = filtered.nlargest(
+        top_n, "Recommended_Order_Quantity"
+    ).sort_values("Recommended_Order_Quantity")
+
+    fig = px.bar(
+        top,
+        x="Recommended_Order_Quantity",
+        y="Store",
+        orientation="h",
+        color="Recommended_Order_Quantity",
+        color_continuous_scale=["#36527d", "#65d5ff", "#a99bff"],
+        title="Recommended order quantity by store",
+        labels={
+            "Recommended_Order_Quantity": "Order quantity proxy",
+            "Store": "Store ID",
+        },
+    )
+    st.plotly_chart(
+        polish_fig(fig, max(350, top_n * 28)),
+        use_container_width=True,
+    )
+
+    section("Selected inventory records")
+
+    display_columns = [
+        "Store",
+        "Average_Daily_Sales",
+        "Lead_Time_Demand",
+        "Safety_Stock",
+        "Reorder_Point",
+        "Target_Stock",
+        "Assumed_Inventory_Position",
+        "Recommended_Order_Quantity",
+    ]
+
+    display_columns = [
+        c for c in display_columns if c in filtered.columns
+    ]
+
+    st.dataframe(
+        filtered[display_columns].round(2),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.download_button(
+        "Download filtered inventory data",
+        filtered.to_csv(index=False).encode("utf-8"),
+        file_name="stocksense_inventory_recommendations.csv",
+        mime="text/csv",
+    )
+
+    with st.expander("Inspect inventory risk assumptions"):
+        if risk_summary is not None:
+            st.markdown("**Saved risk summary**")
+            st.dataframe(
+                risk_summary,
+                use_container_width=True,
+                hide_index=True,
+            )
+
+        if risk is not None:
+            st.markdown("**Store-level risk records**")
+            risk_view = risk.copy()
+            if selected_store != "All stores" and "Store" in risk_view.columns:
+                risk_view = risk_view[
+                    risk_view["Store"] == selected_store
+                ]
+            st.dataframe(
+                risk_view.head(100),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    st.warning(
+        "Interpretation limitation: the current dataset assumes zero "
+        "inventory position for the order recommendations. Consequently, "
+        "the saved risk output flags every store as high risk. This is "
+        "not evidence that all real stores are out of stock. Rossmann "
+        "Sales is revenue, not physical units."
+    )
+
     hero("OPERATIONS / WORKSPACE 04", "Inventory intelligence", "Inspect safety stock, reorder points, order recommendations and risk signals.")
     inventory = load_csv("day17_order_quantity.csv")
     risk = load_csv("day18_inventory_risk.csv")
