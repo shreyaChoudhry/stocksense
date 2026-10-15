@@ -188,6 +188,7 @@ with st.sidebar:
         "WORKSPACE",
         [
             "Overview",
+            "Store Intelligence",
             "Sales Analytics",
             "Model Performance",
             "Inventory Intelligence",
@@ -284,6 +285,167 @@ if page == "Overview":
             mime="text/csv",
         )
 
+
+# ---------- Store Intelligence ----------
+elif page == "Store Intelligence":
+    hero(
+        "STORE INSIGHTS / WORKSPACE 02",
+        "Store intelligence",
+        "Explore historical performance, model errors, anomaly signals and inventory risk for an individual store.",
+    )
+
+    predictions = load_csv("xgboost_predictions.csv")
+    metrics = load_csv("day12_store_metrics.csv")
+    anomalies = load_csv("day19_anomaly_summary.csv")
+    risks = load_csv("day18_inventory_risk.csv")
+
+    if predictions is None:
+        show_missing("xgboost_predictions.csv")
+        st.stop()
+
+    required = {"Date", "Store", "Sales", "XGBoost_Prediction"}
+    if not required.issubset(predictions.columns):
+        st.error(f"Prediction file is missing columns: {sorted(required - set(predictions.columns))}")
+        st.stop()
+
+    predictions = predictions.copy()
+    predictions["Date"] = pd.to_datetime(predictions["Date"], errors="coerce")
+    predictions = predictions.dropna(
+        subset=["Date", "Store", "Sales", "XGBoost_Prediction"]
+    )
+
+    stores = sorted(predictions["Store"].unique())
+    selected_store = st.selectbox("Select store", stores, key="intelligence_store")
+
+    store_data = predictions[predictions["Store"] == selected_store].sort_values("Date")
+
+    if store_data.empty:
+        st.info("No prediction observations available for this store.")
+        st.stop()
+
+    start_date = store_data["Date"].min().date()
+    end_date = store_data["Date"].max().date()
+
+    selected_dates = st.date_input(
+        "Evaluation date range",
+        value=(start_date, end_date),
+        min_value=start_date,
+        max_value=end_date,
+        key="intelligence_dates",
+    )
+
+    if isinstance(selected_dates, (tuple, list)) and len(selected_dates) == 2:
+        start, end = selected_dates
+        store_data = store_data[
+            store_data["Date"].dt.date.between(start, end)
+        ]
+
+    if store_data.empty:
+        st.warning("No prediction observations exist for this date range.")
+        st.stop()
+
+    store_data = store_data.copy()
+    store_data["Absolute_Error"] = (
+        store_data["Sales"] - store_data["XGBoost_Prediction"]
+    ).abs()
+
+    actual_mae = store_data["Absolute_Error"].mean()
+    mean_actual = store_data["Sales"].mean()
+
+    a, b, c, d = st.columns(4)
+    a.metric("Observations", f"{len(store_data):,}")
+    b.metric("Actual mean sales", f"{mean_actual:,.0f}")
+    c.metric("MAE in selected period", f"{actual_mae:,.2f}")
+    d.metric(
+        "Mean prediction",
+        f"{store_data['XGBoost_Prediction'].mean():,.0f}",
+    )
+
+    section(
+        "Actual vs XGBoost prediction",
+        "Hover over the lines to compare actual recorded sales with model predictions.",
+    )
+
+    chart_data = store_data.melt(
+        id_vars=["Date"],
+        value_vars=["Sales", "XGBoost_Prediction"],
+        var_name="Series",
+        value_name="Value",
+    )
+
+    fig = px.line(
+        chart_data,
+        x="Date",
+        y="Value",
+        color="Series",
+        title=f"Store {selected_store} · actual vs predicted",
+        color_discrete_map={
+            "Sales": "#65d5ff",
+            "XGBoost_Prediction": "#a99bff",
+        },
+    )
+    st.plotly_chart(polish_fig(fig, 420), use_container_width=True)
+
+    section("Store-level diagnostics")
+
+    left, right = st.columns(2)
+
+    with left:
+        if metrics is not None and "Store" in metrics.columns:
+            selected_metrics = metrics[metrics["Store"] == selected_store]
+            if not selected_metrics.empty:
+                st.markdown("**Saved store metrics**")
+                st.dataframe(
+                    selected_metrics,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.info("No saved metrics found for this store.")
+        else:
+            st.info("Store metrics file is unavailable.")
+
+    with right:
+        if anomalies is not None and "Store" in anomalies.columns:
+            selected_anomaly = anomalies[
+                anomalies["Store"] == selected_store
+            ]
+            if not selected_anomaly.empty:
+                st.markdown("**Anomaly summary**")
+                st.dataframe(
+                    selected_anomaly,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.info("No anomaly summary row found for this store.")
+        else:
+            st.info("Anomaly summary file is unavailable.")
+
+    if risks is not None and "Store" in risks.columns:
+        selected_risk = risks[risks["Store"] == selected_store]
+        if not selected_risk.empty:
+            section("Inventory risk details")
+            st.dataframe(
+                selected_risk,
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.info("No inventory-risk row found for this store.")
+
+    st.download_button(
+        "Download selected store predictions",
+        store_data.to_csv(index=False).encode("utf-8"),
+        file_name=f"store_{selected_store}_predictions.csv",
+        mime="text/csv",
+    )
+
+    st.caption(
+        "The prediction chart uses saved evaluation predictions, not a new live forecast. "
+        "MAE is calculated for the selected store and date range. "
+        "Sales values represent revenue, not physical units."
+    )
 
 # ---------- Sales Analytics ----------
 elif page == "Sales Analytics":
@@ -404,43 +566,157 @@ elif page == "Inventory Intelligence":
 
 
 # ---------- What-if Simulator ----------
+
+# ---------- What-if Simulator ----------
 elif page == "What-if Simulator":
-    hero("SCENARIO STUDIO / WORKSPACE 05", "What-if simulator", "Explore how demand and lead-time assumptions change an illustrative inventory plan.")
-    scenario = load_csv("day21_inventory_what_if.csv")
+    hero(
+        "SCENARIO STUDIO / WORKSPACE 05",
+        "What-if simulator",
+        "Explore how demand and lead-time changes affect illustrative inventory recommendations.",
+    )
+
     inventory = load_csv("day17_order_quantity.csv")
-    if scenario is None and inventory is None:
-        st.warning("No what-if or inventory output was found. Run the Day 21 simulator notebook first.")
+
+    if inventory is None:
+        show_missing("day17_order_quantity.csv")
         st.stop()
 
-    st.markdown("#### Scenario controls")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        demand_change = st.slider("Demand change (%)", -30, 100, 10, 5)
-    with col2:
-        lead_time = st.slider("Lead time (days)", 1, 30, 7)
-    with col3:
-        service_level = st.select_slider("Service level target", options=["90%", "95%", "97.5%", "99%"], value="95%")
+    required = {
+        "Store",
+        "Average_Daily_Sales",
+        "Daily_Sales_Std",
+        "Safety_Stock",
+        "Reorder_Point",
+        "Recommended_Order_Quantity",
+    }
 
-    if scenario is not None:
-        st.caption("Saved Day 21 what-if results are shown below. Controls above describe a scenario; they do not retrain the forecast model.")
-        st.dataframe(scenario.head(100), use_container_width=True, hide_index=True)
-        st.download_button(
-            "Download saved scenario data",
-            scenario.to_csv(index=False).encode("utf-8"),
-            file_name="stocksense_what_if_results.csv",
-            mime="text/csv",
+    if not required.issubset(inventory.columns):
+        st.error(f"Inventory file is missing columns: {sorted(required - set(inventory.columns))}")
+        st.stop()
+
+    stores = sorted(inventory["Store"].dropna().unique())
+    selected_store = st.selectbox("Select store", stores, key="whatif_store")
+
+    row = inventory.loc[inventory["Store"] == selected_store].iloc[0]
+
+    st.markdown("#### Adjust scenario parameters")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        demand_change = st.slider(
+            "Demand change (%)", -30, 100, 10, 5
         )
-    elif inventory is not None:
-        st.caption("Illustrative scenario preview based on existing order recommendations.")
-        numeric_cols = inventory.select_dtypes(include="number").columns.tolist()
-        if numeric_cols:
-            preview = inventory.head(100).copy()
-            candidate = next((c for c in numeric_cols if any(word in c.lower() for word in ["order", "quantity", "demand", "sales"])), numeric_cols[0])
-            preview[f"{candidate}_scenario_preview"] = preview[candidate] * (1 + demand_change / 100)
-            st.dataframe(preview, use_container_width=True, hide_index=True)
+
+    with c2:
+        lead_time = st.slider(
+            "Lead time (days)", 1, 30, 7
+        )
+
+    with c3:
+        service_level = st.select_slider(
+            "Service level",
+            options=[90, 95, 97, 99],
+            value=95,
+            format_func=lambda x: f"{x}%",
+        )
+
+    # Illustrative normal-demand assumptions.
+    # Z values are approximations for the selected service levels.
+    z_scores = {90: 1.282, 95: 1.645, 97: 1.881, 99: 2.326}
+
+    average_daily = max(float(row["Average_Daily_Sales"]), 0)
+    daily_std = max(float(row["Daily_Sales_Std"]), 0)
+
+    adjusted_daily = average_daily * (1 + demand_change / 100)
+    adjusted_lead_demand = adjusted_daily * lead_time
+
+    adjusted_safety_stock = (
+        z_scores[service_level] * daily_std * (lead_time ** 0.5)
+    )
+
+    adjusted_reorder_point = adjusted_lead_demand + adjusted_safety_stock
+
+    review_period = 7
+    target_stock = (
+        adjusted_daily * (lead_time + review_period)
+        + adjusted_safety_stock
+    )
+
+    # Existing inventory position is an assumption, not a measured stock count.
+    assumed_inventory_position = max(
+        float(row.get("Assumed_Inventory_Position", 0) or 0), 0
+    )
+
+    recommended_order = max(
+        0, round(target_stock - assumed_inventory_position)
+    )
+
+    st.divider()
+    st.markdown("#### Recalculated scenario")
+
+    m1, m2, m3, m4 = st.columns(4)
+
+    m1.metric(
+        "Adjusted daily demand proxy",
+        f"{adjusted_daily:,.1f}",
+        help="Based on historical average sales, not physical units.",
+    )
+    m2.metric("Lead-time demand proxy", f"{adjusted_lead_demand:,.1f}")
+    m3.metric("Safety-stock proxy", f"{adjusted_safety_stock:,.1f}")
+    m4.metric("Illustrative order quantity", f"{recommended_order:,.0f}")
+
+    comparison = pd.DataFrame({
+        "Metric": [
+            "Lead-time demand",
+            "Safety stock",
+            "Reorder point",
+            "Target stock",
+            "Recommended order quantity",
+        ],
+        "Original": [
+            float(row["Lead_Time_Demand"]),
+            float(row["Safety_Stock"]),
+            float(row["Reorder_Point"]),
+            float(row["Target_Stock"]),
+            float(row["Recommended_Order_Quantity"]),
+        ],
+        "Scenario": [
+            adjusted_lead_demand,
+            adjusted_safety_stock,
+            adjusted_reorder_point,
+            target_stock,
+            recommended_order,
+        ],
+    })
+
+    st.dataframe(
+        comparison.round(2),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    fig = px.bar(
+        comparison[comparison["Metric"].isin([
+            "Lead-time demand",
+            "Safety stock",
+            "Reorder point",
+            "Recommended order quantity",
+        ])],
+        x="Metric",
+        y=["Original", "Scenario"],
+        barmode="group",
+        title="Original vs adjusted scenario",
+        color_discrete_sequence=["#65d5ff", "#a99bff"],
+    )
+
+    st.plotly_chart(polish_fig(fig, 390), use_container_width=True)
+
     st.info(
-        f"Scenario settings: demand {demand_change:+d}%, lead time {lead_time} days, service level {service_level}. "
-        "This interactive panel is a sensitivity preview; the saved model is not retrained and inventory assumptions remain illustrative."
+        "This is a sensitivity simulation, not a physical stock recommendation. "
+        "Rossmann Sales represents revenue rather than units sold. "
+        "The assumed inventory position and 7-day review period are illustrative. "
+        "The model is not retrained when you change these controls."
     )
 
 
