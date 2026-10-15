@@ -189,6 +189,7 @@ with st.sidebar:
         [
             "Overview",
             "Store Intelligence",
+            "Forecast Analysis",
             "Sales Analytics",
             "Model Performance",
             "Inventory Intelligence",
@@ -445,6 +446,190 @@ elif page == "Store Intelligence":
         "The prediction chart uses saved evaluation predictions, not a new live forecast. "
         "MAE is calculated for the selected store and date range. "
         "Sales values represent revenue, not physical units."
+    )
+
+# ---------- Forecast Analysis ----------
+elif page == "Forecast Analysis":
+    hero(
+        "FORECAST LAB / WORKSPACE",
+        "Forecast analysis",
+        "Compare saved XGBoost predictions against actual sales and inspect prediction errors.",
+    )
+
+    predictions = load_csv("xgboost_predictions.csv")
+
+    if predictions is None:
+        show_missing("xgboost_predictions.csv")
+        st.stop()
+
+    required = {"Date", "Store", "Sales", "XGBoost_Prediction"}
+    if not required.issubset(predictions.columns):
+        st.error(
+            f"Prediction file is missing columns: "
+            f"{sorted(required - set(predictions.columns))}"
+        )
+        st.stop()
+
+    predictions = predictions.copy()
+    predictions["Date"] = pd.to_datetime(
+        predictions["Date"], errors="coerce"
+    )
+    predictions = predictions.dropna(
+        subset=["Date", "Store", "Sales", "XGBoost_Prediction"]
+    )
+
+    stores = sorted(predictions["Store"].unique())
+
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        selected_store = st.selectbox(
+            "Select store", stores, key="forecast_store"
+        )
+
+    store_data = predictions[
+        predictions["Store"] == selected_store
+    ].sort_values("Date")
+
+    with col2:
+        start_date = store_data["Date"].min().date()
+        end_date = store_data["Date"].max().date()
+
+        date_range = st.date_input(
+            "Evaluation period",
+            value=(start_date, end_date),
+            min_value=start_date,
+            max_value=end_date,
+            key="forecast_date_range",
+        )
+
+    if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+        start, end = date_range
+        store_data = store_data[
+            store_data["Date"].dt.date.between(start, end)
+        ]
+
+    if store_data.empty:
+        st.warning("No prediction observations exist for this selection.")
+        st.stop()
+
+    store_data = store_data.copy()
+    store_data["Error"] = (
+        store_data["Sales"] - store_data["XGBoost_Prediction"]
+    )
+    store_data["Absolute_Error"] = store_data["Error"].abs()
+
+    mae = store_data["Absolute_Error"].mean()
+    rmse = (store_data["Error"].pow(2).mean()) ** 0.5
+    mean_actual = store_data["Sales"].mean()
+    mean_prediction = store_data["XGBoost_Prediction"].mean()
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Observations", f"{len(store_data):,}")
+    m2.metric("MAE", f"{mae:,.2f}")
+    m3.metric("RMSE", f"{rmse:,.2f}")
+    m4.metric("Mean actual sales", f"{mean_actual:,.0f}")
+
+    st.caption(
+        "Metrics below are recalculated for the selected store and date range. "
+        "They may differ from the saved global evaluation metrics."
+    )
+
+    section("Actual vs predicted sales")
+
+    chart_data = store_data.melt(
+        id_vars=["Date"],
+        value_vars=["Sales", "XGBoost_Prediction"],
+        var_name="Series",
+        value_name="Sales_Value",
+    )
+
+    fig = px.line(
+        chart_data,
+        x="Date",
+        y="Sales_Value",
+        color="Series",
+        title=f"Store {selected_store}: actual vs XGBoost prediction",
+        color_discrete_map={
+            "Sales": "#65d5ff",
+            "XGBoost_Prediction": "#a99bff",
+        },
+    )
+
+    st.plotly_chart(
+        polish_fig(fig, 420),
+        use_container_width=True,
+    )
+
+    section("Prediction error analysis")
+
+    e1, e2 = st.columns(2)
+
+    with e1:
+        error_fig = px.histogram(
+            store_data,
+            x="Error",
+            nbins=35,
+            title="Prediction error distribution",
+            color_discrete_sequence=["#65d5ff"],
+        )
+        error_fig.add_vline(
+            x=0,
+            line_dash="dash",
+            line_color="#ff8585",
+        )
+        st.plotly_chart(
+            polish_fig(error_fig, 350),
+            use_container_width=True,
+        )
+
+    with e2:
+        direction_counts = pd.DataFrame({
+            "Prediction outcome": ["Underprediction", "Overprediction", "Exact"],
+            "Observations": [
+                int((store_data["Error"] > 0).sum()),
+                int((store_data["Error"] < 0).sum()),
+                int((store_data["Error"] == 0).sum()),
+            ],
+        })
+
+        direction_fig = px.pie(
+            direction_counts,
+            names="Prediction outcome",
+            values="Observations",
+            hole=0.62,
+            title="Prediction direction",
+            color="Prediction outcome",
+            color_discrete_map={
+                "Underprediction": "#65d5ff",
+                "Overprediction": "#a99bff",
+                "Exact": "#52dfb3",
+            },
+        )
+        st.plotly_chart(
+            polish_fig(direction_fig, 350),
+            use_container_width=True,
+        )
+
+    with st.expander("Inspect prediction records"):
+        st.dataframe(
+            store_data.sort_values(
+                "Absolute_Error", ascending=False
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.download_button(
+        "Download forecast evaluation",
+        store_data.to_csv(index=False).encode("utf-8"),
+        file_name=f"store_{selected_store}_forecast_evaluation.csv",
+        mime="text/csv",
+    )
+
+    st.info(
+        "These are saved evaluation predictions, not future live forecasts. "
+        "Sales represent revenue, not physical product units."
     )
 
 # ---------- Sales Analytics ----------
