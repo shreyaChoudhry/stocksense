@@ -119,13 +119,27 @@ def load_csv(filename):
 @st.cache_data(show_spinner=False)
 def load_sales():
     path = DATA / "store_daily_sales.csv"
+
     if not path.exists():
         return None
-    frame = pd.read_csv(path, parse_dates=["Date"])
+
+    try:
+        frame = pd.read_csv(path, parse_dates=["Date"])
+    except (pd.errors.EmptyDataError, pd.errors.ParserError, UnicodeDecodeError, OSError) as exc:
+        raise ValueError(f"Could not read store_daily_sales.csv: {exc}") from exc
+
     required = {"Store", "Date", "Sales"}
+
     if not required.issubset(frame.columns):
-        raise ValueError(f"store_daily_sales.csv needs columns: {sorted(required)}")
+        raise ValueError(
+            f"store_daily_sales.csv needs columns: {sorted(required)}"
+        )
+
     frame = frame.dropna(subset=["Store", "Date", "Sales"])
+
+    if frame.empty:
+        raise ValueError("store_daily_sales.csv has no valid rows.")
+
     return frame.sort_values(["Date", "Store"])
 
 
