@@ -361,3 +361,18 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+.auth-quick-link {
+  padding: 11px;
+  text-align: center;
+  font-size: 11px;
+  border: 1px solid #34445a;
+  border-radius: 9px;
+  color: #a6b4c7;
+  background: #0b1222;
+  transition: .2s;
+}
+
+.auth-quick-link:hover {
+  border-color: #4df6df;
+  color: #4df6df;
+}
