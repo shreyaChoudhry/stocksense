@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -9,7 +9,7 @@ import {
   ArrowUpRight,
   Bell,
   Boxes,
-  Check,
+  ChevronDown,
   Download,
   FileText,
   LayoutDashboard,
@@ -21,7 +21,6 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
-  Truck,
   X,
   Zap,
 } from "lucide-react";
@@ -58,64 +57,123 @@ const navigation = [
   { label: "Settings", icon: Settings },
 ];
 
-function MetricCard({
-  label,
-  value,
-  change,
-  note,
-  icon: Icon,
-  tone = "teal",
-}: {
-  label: string;
-  value: string;
-  change?: string;
-  note: string;
-  icon: typeof TrendingUp;
-  tone?: "teal" | "green" | "amber" | "red";
-}) {
-  const tones = {
-    teal: "bg-teal-400/10 text-teal-300",
-    green: "bg-emerald-400/10 text-emerald-300",
-    amber: "bg-amber-400/10 text-amber-300",
-    red: "bg-rose-400/10 text-rose-300",
-  };
+const sage = "#A9B89A";
+
+function BrandMark({ size = 30 }: { size?: number }) {
   return (
-    <article className="rounded-2xl border border-white/6 bg-[#111a2b] p-5 shadow-lg shadow-black/10 transition hover:-translate-y-0.5 hover:border-teal-300/20">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-400">{label}</p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight text-white">{value}</p>
-        </div>
-        <span className={`rounded-xl p-2.5 ${tones[tone]}`}><Icon size={19} /></span>
-      </div>
-      <div className="mt-5 flex items-center justify-between gap-2 text-xs">
-        {change ? <span className="flex items-center gap-1 font-semibold text-emerald-300"><ArrowUpRight size={14} />{change}</span> : <span className="text-teal-300">● {note}</span>}
-        {change && <span className="text-slate-500">{note}</span>}
-      </div>
-    </article>
+    <span
+      className="grid shrink-0 place-items-center rounded-[15px] border border-[#465044] bg-[#20251f]"
+      style={{ width: size + 18, height: size + 18 }}
+    >
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M2.5 16h6.2l4.2-11 7.1 22 4.2-11h5.3" stroke={sage} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
   );
 }
 
-function SalesChart() {
+function Panel({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`min-w-0 rounded-[20px] border border-[#2b302b] bg-[#171a18] shadow-[0_10px_32px_rgba(0,0,0,0.14)] ${className}`}>
+      {children}
+    </section>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  detail,
+  positive = true,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  positive?: boolean;
+  icon: typeof TrendingUp;
+}) {
+  return (
+    <Panel className="p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-medium text-[#a4aaa0]">{label}</p>
+        <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#252a24] text-[#a9b89a]">
+          <Icon size={15} strokeWidth={1.8} />
+        </span>
+      </div>
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-2">
+        <p className="text-[clamp(1.45rem,2vw,1.9rem)] font-semibold tracking-tight text-[#f0f1ed]">{value}</p>
+        <span className={`mb-1 text-[10px] font-medium ${positive ? "text-[#a9b89a]" : "text-[#c49a78]"}`}>{detail}</span>
+      </div>
+      <div className="mt-4 flex items-center gap-2 border-t border-[#303330] pt-3 text-[10px] text-[#777e75]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#78866e]" />
+        Compared with previous period
+      </div>
+    </Panel>
+  );
+}
+
+function SalesChart({ period }: { period: string }) {
+  const paths: Record<string, string> = {
+    Daily: "M10 170 C70 145 90 160 145 128 S220 142 270 105 S345 120 400 82 S475 95 530 55 S585 48 615 24",
+    Weekly: "M10 160 C65 155 75 115 130 126 S205 142 255 95 S330 112 380 76 S455 95 505 48 S565 55 615 24",
+    Monthly: "M10 165 C60 145 75 120 130 135 S210 118 255 91 S330 113 380 74 S455 88 505 49 S565 52 615 20",
+  };
+  const line = paths[period] ?? paths.Monthly;
+
   return (
     <div className="mt-5">
-      <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
-        <span className="flex items-center gap-2"><i className="h-0.5 w-5 rounded bg-teal-300" />Actual revenue</span>
-        <span className="flex items-center gap-2"><i className="h-0.5 w-5 border-t-2 border-dashed border-emerald-300" />AI forecast</span>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-[10px] text-[#a4aaa0]">
+        <div className="flex gap-4">
+          <span className="flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-[#a9b89a]" /> Actual sales</span>
+          <span className="flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-[#78866e]" /> Forecast</span>
+        </div>
+        <span className="text-[#777e75]">REVENUE · INR</span>
       </div>
-      <div className="h-56 w-full">
-        <svg viewBox="0 0 720 220" className="h-full w-full" role="img" aria-label="Illustrative sales revenue trend chart">
-          {[25, 70, 115, 160, 200].map((y) => <line key={y} x1="35" x2="710" y1={y} y2={y} stroke="#293449" strokeDasharray="4 5" />)}
-          <defs><linearGradient id="salesFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#4df6df" stopOpacity=".25" /><stop offset="100%" stopColor="#4df6df" stopOpacity="0" /></linearGradient></defs>
-          <path d="M35 170 C80 165 100 130 150 142 S220 125 260 98 S330 115 375 82 S450 92 495 58 L495 200 L35 200Z" fill="url(#salesFill)" />
-          <path d="M35 170 C80 165 100 130 150 142 S220 125 260 98 S330 115 375 82 S450 92 495 58" fill="none" stroke="#4df6df" strokeWidth="3" strokeLinecap="round" />
-          <path d="M495 58 C545 55 575 43 620 38 S675 24 710 18" fill="none" stroke="#5ade95" strokeWidth="2.5" strokeDasharray="6 6" strokeLinecap="round" />
-          <line x1="495" x2="495" y1="20" y2="200" stroke="#4df6df" strokeDasharray="3 5" opacity=".5" />
-          {["Oct 01", "Oct 06", "Oct 12", "Oct 18", "Today", "Oct 27", "Oct 30"].map((label, i) => <text key={label} x={[35, 145, 255, 365, 495, 605, 710][i]} y="217" fill={i === 4 ? "#4df6df" : "#8492a6"} fontSize="10" textAnchor="middle">{label}</text>)}
-          <circle cx="495" cy="58" r="5" fill="#4df6df" stroke="#111a2b" strokeWidth="3" />
-        </svg>
+      <svg viewBox="0 0 640 230" className="h-52 w-full" role="img" aria-label="Illustrative sales and forecast chart">
+        <defs>
+          <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a9b89a" stopOpacity=".18" />
+            <stop offset="100%" stopColor="#a9b89a" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {[30, 75, 120, 165, 205].map((y) => (
+          <line key={y} x1="8" x2="630" y1={y} y2={y} stroke="#303530" strokeDasharray="3 7" />
+        ))}
+        <path d={`${line} L615 205 L10 205 Z`} fill="url(#salesFill)" />
+        <path d={line} fill="none" stroke="#a9b89a" strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M395 76 C455 66 520 45 615 18" fill="none" stroke="#78866e" strokeWidth="2" strokeDasharray="5 7" />
+        <line x1="395" x2="395" y1="20" y2="205" stroke="#69745f" strokeDasharray="3 7" opacity=".65" />
+        <circle cx="395" cy="72" r="5" fill="#c3cdb8" stroke="#171917" strokeWidth="2" />
+        {["01", "05", "10", "15", "20", "25", "30"].map((d, i) => (
+          <text key={d} x={[10, 110, 210, 310, 410, 510, 615][i]} y="224" fill="#777e75" fontSize="9" textAnchor="middle">{d} OCT</text>
+        ))}
+      </svg>
+      <div className="mt-2 flex flex-wrap justify-between gap-2 text-[10px] text-[#777e75]">
+        <span>Sales trajectory · illustrative sample data</span>
+        <span className="text-[#a9b89a]">Forecast confidence: sample 98.7%</span>
       </div>
-      <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-500"><span>Revenue trend · illustrative sample data</span><span className="text-emerald-300">Forecast accuracy: sample 98.7%</span></div>
+    </div>
+  );
+}
+
+function MiniBars() {
+  const heights = [30, 48, 38, 67, 53, 82, 62, 94, 72, 108, 87, 120, 98, 136, 115, 150];
+  return (
+    <div className="flex h-20 items-end gap-1.5">
+      {heights.map((height, index) => (
+        <div
+          key={index}
+          className="flex-1 rounded-t-sm"
+          style={{ height: `${height / 1.6}%`, background: index > 11 ? "#a9b89a" : "#78866e", opacity: index > 11 ? 1 : 0.65 }}
+        />
+      ))}
     </div>
   );
 }
@@ -130,16 +188,18 @@ export default function DashboardPage() {
   const [notice, setNotice] = useState("");
   const [busyAction, setBusyAction] = useState("");
 
-  const filteredItems = useMemo(() => stockItems.filter((item) => {
-    const matchesFilter = filter === "All" || item.status === filter;
-    const text = `${item.name} ${item.sku} ${item.vendor}`.toLowerCase();
-    return matchesFilter && text.includes(query.toLowerCase());
-  }), [filter, query]);
+  const filteredItems = useMemo(
+    () =>
+      stockItems.filter((item) => {
+        const matchesFilter = filter === "All" || item.status === filter;
+        return matchesFilter && `${item.name} ${item.sku} ${item.vendor}`.toLowerCase().includes(query.toLowerCase());
+      }),
+    [filter, query]
+  );
 
   async function logout() {
     try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+      await createClient().auth.signOut();
     } finally {
       router.push("/login");
       router.refresh();
@@ -147,7 +207,10 @@ export default function DashboardPage() {
   }
 
   function exportCsv() {
-    const rows = [["Product", "SKU", "Current stock", "Threshold", "Vendor", "Status"], ...filteredItems.map((item) => [item.name, item.sku, String(item.stock), String(item.threshold), item.vendor, item.status])];
+    const rows = [
+      ["Product", "SKU", "Current stock", "Threshold", "Vendor", "Status"],
+      ...filteredItems.map((item) => [item.name, item.sku, String(item.stock), String(item.threshold), item.vendor, item.status]),
+    ];
     const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const anchor = document.createElement("a");
@@ -159,113 +222,323 @@ export default function DashboardPage() {
 
   function runAction(label: string) {
     setBusyAction(label);
-    setNotice(`${label} is a UI demo action. Connect the backend to execute it for real.`);
+    setNotice(`${label}: this is currently a dashboard preview action. Connect the relevant backend workflow to execute it.`);
     window.setTimeout(() => setBusyAction(""), 700);
   }
 
-  const SidebarContent = (
+  const sidebar = (
     <>
-      <div className="flex h-20 items-center justify-between border-b border-white/6 px-6">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-300 text-[#062522] shadow-lg shadow-teal-300/20"><Boxes size={21} /></div>
-          <div><p className="text-lg font-bold tracking-tight text-white">StockSense</p><p className="text-[10px] font-bold tracking-[0.22em] text-teal-300">INTELLIGENCE</p></div>
+      <div className="flex h-22 items-center gap-3 border-b border-[#303330] px-5">
+        <BrandMark size={25} />
+        <div className="min-w-0">
+          <p className="text-[16px] font-semibold tracking-tight text-[#f0f1ed]">Stock<span className="text-[#a9b89a]">Sense</span></p>
+          <p className="mt-1 text-[9px] font-medium tracking-[.18em] text-[#858d80]">RETAIL INTELLIGENCE</p>
         </div>
-        <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
+        <span className="ml-auto h-2 w-2 rounded-full bg-[#a9b89a]" />
       </div>
-      <div className="px-4 pb-3 pt-6 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Operational units</div>
+
+      <div className="px-5 pb-2 pt-7 text-[10px] font-medium text-[#858d80]">Workspace</div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3">
         {navigation.map(({ label, icon: Icon, tag, count }) => (
-          <button key={label} onClick={() => { setActiveNav(label); setMobileOpen(false); if (label !== "Overview") setNotice(`${label} section is coming next. The overview dashboard is currently active.`); }} className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition ${activeNav === label ? "bg-teal-300 font-semibold text-[#062522] shadow-lg shadow-teal-300/10" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-            <span className="flex items-center gap-3"><Icon size={18} />{label}</span>
-            {tag && <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${activeNav === label ? "bg-black/10" : "bg-teal-300/10 text-teal-300"}`}>{tag}</span>}
-            {count && <span className="rounded-full bg-rose-400/15 px-2 py-0.5 text-[10px] font-bold text-rose-300">{count}</span>}
+          <button
+            key={label}
+            onClick={() => {
+              setActiveNav(label);
+              setMobileOpen(false);
+              if (label !== "Overview") setNotice(`${label} is a preview section. Overview remains the active dashboard.`);
+            }}
+            className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-[12px] transition ${
+              activeNav === label
+                ? "bg-[#292e28] text-[#f0f1ed] shadow-inner"
+                : "text-[#a2a89e] hover:bg-[#202420] hover:text-white"
+            }`}
+          >
+            <span className="flex items-center gap-3"><Icon size={16} strokeWidth={1.8} />{label}</span>
+            {tag && <span className="text-[9px] font-semibold text-[#a9b89a]">{tag}</span>}
+            {count && <span className="rounded-full bg-[#30372e] px-2 py-0.5 text-[9px] text-[#c3cdb8]">{count}</span>}
           </button>
         ))}
       </nav>
-      <div className="m-3 rounded-xl border border-white/6 bg-[#111a2b] p-3">
-        <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-teal-300/15 text-sm font-bold text-teal-200">SS</div>
-          <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">StockSense User</p><p className="truncate text-xs text-slate-500">Retail workspace</p></div>
-          <button onClick={logout} title="Log out" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white"><LogOut size={17} /></button>
+
+      <div className="border-t border-[#303330] p-4">
+        <div className="mb-4 flex items-center gap-2 text-[9px] text-[#858d80]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#a9b89a]" />
+          SYSTEM STATUS
+          <span className="ml-auto text-[#a9b89a]">OPERATIONAL</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="grid h-9 w-9 place-items-center rounded-full border border-[#465044] bg-[#252b23] text-[10px] font-semibold text-[#c3cdb8]">SS</div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-semibold text-[#e7e9e3]">StockSense User</p>
+            <p className="text-[10px] text-[#858d80]">Retail workspace</p>
+          </div>
+          <button onClick={logout} title="Log out" className="rounded-lg p-2 text-[#a2a89e] transition hover:bg-[#292e28] hover:text-white">
+            <LogOut size={15} />
+          </button>
         </div>
       </div>
     </>
   );
 
   return (
-    <div className="min-h-screen bg-[#0e1323] text-slate-100">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-white/6 bg-[#080d1d] lg:flex">{SidebarContent}</aside>
-      {mobileOpen && <div className="fixed inset-0 z-50 bg-black/60 lg:hidden" onClick={() => setMobileOpen(false)}><aside className="flex h-full w-72 flex-col bg-[#080d1d]" onClick={(e) => e.stopPropagation()}>{SidebarContent}</aside></div>}
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/6 bg-[#080d1d]/90 px-4 backdrop-blur-xl sm:px-6">
+    <div className="stocksense-dashboard min-h-screen bg-[#101210] text-[#e8eae4]">
+      <style jsx global>{`
+        .stocksense-dashboard {
+          color-scheme: dark;
+        }
+        .stocksense-dashboard h1,
+        .stocksense-dashboard h2,
+        .stocksense-dashboard h3,
+        .stocksense-dashboard p {
+          margin-block: 0;
+          letter-spacing: normal;
+          text-transform: none;
+          position: static;
+          transform: none;
+          text-shadow: none;
+        }
+        .stocksense-dashboard h1 { line-height: 1.2 !important; }
+        .stocksense-dashboard h2 { line-height: 1.35 !important; font-size: 16px !important; }
+        .stocksense-dashboard h3 { line-height: 1.4 !important; }
+        .stocksense-dashboard p { line-height: 1.5; }
+        .stocksense-dashboard button,
+        .stocksense-dashboard input { font-family: inherit; }
+        .stocksense-dashboard button { border-radius: 11px; }
+        .stocksense-dashboard input { border-radius: 11px; }
+        .stocksense-dashboard section { min-width: 0; }
+        .stocksense-dashboard aside { scrollbar-width: thin; scrollbar-color: #454b43 transparent; }
+        .stocksense-dashboard svg { flex-shrink: 0; }
+      `}</style>
+
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-63 flex-col border-r border-[#2b302b] bg-[#131613] xl:flex">
+        {sidebar}
+      </aside>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 bg-black/65 xl:hidden" onClick={() => setMobileOpen(false)}>
+          <aside className="flex h-full w-70 flex-col border-r border-[#2b302b] bg-[#131613]" onClick={(event) => event.stopPropagation()}>
+            {sidebar}
+          </aside>
+        </div>
+      )}
+
+      <div className="xl:pl-63">
+        <header className="sticky top-0 z-30 flex min-h-17 flex-wrap items-center justify-between gap-3 border-b border-[#2b302b] bg-[#131613]/95 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex items-center gap-3">
-            <button className="rounded-lg p-2 text-slate-300 hover:bg-white/5 lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
-            <div className="hidden items-center gap-2 text-xs text-slate-500 sm:flex"><span>Workspace</span><span>/</span><span className="font-semibold text-slate-200">{activeNav}</span></div>
-            <span className="hidden h-4 w-px bg-white/10 sm:block" />
-            <span className="flex items-center gap-2 text-[11px] text-slate-400"><i className="h-2 w-2 rounded-full bg-emerald-400" />Demo data</span>
+            <button className="rounded-lg p-2 text-[#a2a89e] xl:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
+              <Menu size={19} />
+            </button>
+            <div className="hidden items-center gap-2 text-[10px] text-[#858d80] sm:flex">
+              <span>WORKSPACE</span><span className="text-[#596052]">/</span><span className="font-semibold text-[#e0e4db]">{activeNav.toUpperCase()}</span>
+            </div>
+            <span className="hidden h-4 w-px bg-[#343a33] sm:block" />
+            <span className="flex items-center gap-2 text-[10px] text-[#a9b89a]"><i className="h-1.5 w-1.5 rounded-full bg-[#a9b89a]" /> SYSTEM ONLINE</span>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <label className="relative hidden md:block"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products or SKUs..." className="h-9 w-56 rounded-lg border border-white/7 bg-white/4 pl-9 pr-3 text-xs text-white outline-none placeholder:text-slate-500 focus:border-teal-300/50" /></label>
-            <button onClick={exportCsv} className="hidden h-9 items-center gap-2 rounded-lg border border-white/8 bg-white/4 px-3 text-xs font-medium text-slate-300 hover:bg-white/8 sm:flex"><Download size={15} />Export</button>
-            <button onClick={() => setNotice("You have 8 sample stock alerts to review.")} className="relative grid h-9 w-9 place-items-center rounded-lg bg-white/4 text-slate-300 hover:bg-white/8" aria-label="Notifications"><Bell size={17} /><i className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-rose-400" /></button>
-            <button onClick={logout} className="hidden h-9 items-center gap-2 rounded-lg bg-teal-300/10 px-3 text-xs font-semibold text-teal-200 hover:bg-teal-300/20 sm:flex"><LogOut size={15} />Logout</button>
+
+          <div className="flex flex-1 items-center justify-end gap-2 sm:gap-4">
+            <label className="relative hidden max-w-70 flex-1 md:block">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#858d80]" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search products, SKU or supplier..."
+                className="h-9 w-full rounded-xl border border-[#343a33] bg-[#1b1f1c] pl-9 pr-3 text-[11px] text-white outline-none placeholder:text-[#777e75] focus:border-[#78866e]"
+              />
+            </label>
+            <div className="hidden text-right sm:block">
+              <p className="text-[9px] text-[#777e75]">WORKSPACE</p>
+              <p className="text-[11px] font-semibold text-[#e0e4db]">Retail Operations <ChevronDown size={11} className="ml-1 inline" /></p>
+            </div>
+            <button onClick={() => setNotice("You have 8 illustrative stock alerts to review.")} className="relative grid h-9 w-9 place-items-center rounded-xl border border-[#343a33] text-[#a2a89e] transition hover:bg-[#252a24]" aria-label="Notifications">
+              <Bell size={15} /><i className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#a9b89a]" />
+            </button>
+            <button onClick={logout} className="hidden h-9 items-center gap-2 rounded-xl border border-[#485044] px-3 text-[10px] font-semibold text-[#c3cdb8] transition hover:bg-[#292e28] sm:flex">
+              <LogOut size={14} /> LOG OUT
+            </button>
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1600px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-          {notice && <div className="flex items-start justify-between gap-3 rounded-xl border border-teal-300/20 bg-teal-300/10 px-4 py-3 text-sm text-teal-100"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss"><X size={16} /></button></div>}
-          <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-            <div><div className="mb-2 flex flex-wrap items-center gap-2"><span className="rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-teal-200"><Zap size={12} className="mr-1 inline" />Intelligence engine active</span><span className="text-xs text-slate-500">Synced just now · INR</span></div><h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Good morning, welcome back.</h1><p className="mt-2 text-sm text-slate-400">Here&apos;s what&apos;s happening across your retail operations today.</p></div>
-            <div className="flex flex-wrap gap-2"><button onClick={() => runAction("Scenario simulation")} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-white/8"><Activity size={15} />Simulate scenario</button><button onClick={() => runAction("Purchase order batch generation")} className="flex items-center gap-2 rounded-lg bg-teal-300 px-4 py-2.5 text-xs font-bold text-[#062522] shadow-lg shadow-teal-300/15 hover:bg-teal-200"><Zap size={15} />Generate PO batch <ArrowRight size={14} /></button></div>
-          </section>
+        <main className="dashboard-content mx-auto w-full space-y-5 p-4 sm:p-6 lg:p-7">
+          {notice && (
+            <div className="flex items-start justify-between gap-3 rounded-xl border border-[#4a5542] bg-[#20271e] px-4 py-3 text-[11px] text-[#d3dccb]">
+              <span>{notice}</span>
+              <button onClick={() => setNotice("")} aria-label="Dismiss" className="text-[#b8c3ad]"><X size={14} /></button>
+            </div>
+          )}
 
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Total revenue" value="₹24.85L" change="+18.6%" note="vs previous period" icon={TrendingUp} />
-            <MetricCard label="Total orders" value="12,845" change="+12.4%" note="vs previous period" icon={Package} tone="green" />
-            <MetricCard label="Inventory health" value="94.2%" note="Optimal stock levels" icon={ShieldCheck} tone="teal" />
-            <MetricCard label="Stockout risk" value="08 SKUs" note="Needs attention" icon={AlertTriangle} tone="red" />
-          </section>
-
-          <section className="grid gap-4 xl:grid-cols-12">
-            <article className="rounded-2xl border border-white/6 bg-[#111a2b] p-5 shadow-lg xl:col-span-8 sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold text-white">Sales performance & forecast</h2><p className="mt-1 text-xs text-slate-500">Revenue trend with illustrative AI trajectory</p></div><div className="flex rounded-lg bg-black/20 p-1">{["Daily", "Weekly", "Monthly"].map((p) => <button key={p} onClick={() => setPeriod(p)} className={`rounded-md px-3 py-1.5 text-xs ${period === p ? "bg-white/10 font-semibold text-teal-200" : "text-slate-500 hover:text-white"}`}>{p}</button>)}</div></div>
-              <SalesChart />
-            </article>
-            <article className="rounded-2xl border border-white/6 bg-[#111a2b] p-5 shadow-lg xl:col-span-4 sm:p-6">
-              <div><h2 className="font-semibold text-white">Inventory distribution</h2><p className="mt-1 text-xs text-slate-500">Stock allocation across 1,420 sample SKUs</p></div>
-              <div className="relative mx-auto my-6 grid h-44 w-44 place-items-center">
-                <div className="h-full w-full rounded-full" style={{ background: "conic-gradient(#4df6df 0 72%, #f4b841 72% 88%, #fb7185 88% 95%, #394356 95% 100%)" }} />
-                <div className="absolute grid h-28 w-28 place-items-center rounded-full bg-[#111a2b] text-center"><div><p className="text-2xl font-semibold text-white">1,420</p><p className="text-[10px] uppercase tracking-wider text-slate-500">Total SKUs</p></div></div>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold tracking-[.14em] text-[#a9b89a]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#a9b89a]" /> STOCKSENSE INTELLIGENCE
               </div>
-              <div className="space-y-3 text-xs">
-                {[["In stock","1,022","72%","bg-teal-300"],["Low stock","227","16%","bg-amber-300"],["Out of stock","99","7%","bg-rose-400"],["Overstocked","72","5%","bg-slate-500"]].map(([label, count, pct, color]) => <div key={label} className="flex items-center justify-between"><span className="flex items-center gap-2 text-slate-400"><i className={`h-2 w-2 rounded-full ${color}`} />{label}</span><span className="font-semibold text-slate-200">{count} <span className="ml-2 font-normal text-slate-500">{pct}</span></span></div>)}
+              <h1 className="text-[25px] font-semibold tracking-tight text-[#f0f1ed] sm:text-[30px]">
+                Good evening. <span className="font-normal text-[#a6ada1]">Here&apos;s your business pulse.</span>
+              </h1>
+              <p className="mt-2 text-[11px] text-[#858d80]">Retail performance, inventory exposure and demand signals · illustrative demo data</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => runAction("Scenario simulation")} className="flex items-center gap-2 rounded-xl border border-[#3b403a] bg-[#1b1f1c] px-4 py-2.5 text-[10px] text-[#c3c9bd] transition hover:bg-[#252a24]">
+                <Activity size={14} /> SIMULATE
+              </button>
+              <button onClick={() => runAction("Purchase order batch")} className="flex items-center gap-2 rounded-xl bg-[#b5c2a8] px-4 py-2.5 text-[10px] font-semibold text-[#182017] transition hover:bg-[#c2cdb7]">
+                <Zap size={14} /> GENERATE PO <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+
+          <section className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-5">
+            <Metric label="Net sales · month" value="₹24.85L" detail="+18.6%" icon={TrendingUp} />
+            <Metric label="Inventory health" value="94.2%" detail="OPTIMAL" icon={ShieldCheck} />
+            <Metric label="Orders processed" value="12,845" detail="+12.4%" icon={Boxes} />
+            <Metric label="Stockout exposure" value="08 SKUs" detail="ATTENTION" positive={false} icon={AlertTriangle} />
+            <Metric label="Forecast signal" value="16.4%" detail="RISING" icon={Activity} />
+          </section>
+
+          <section className="grid gap-4 2xl:grid-cols-12">
+            <Panel className="p-5 sm:p-6 2xl:col-span-8">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[.13em] text-[#a9b89a]">01 / PERFORMANCE</p>
+                  <h2 className="mt-2 font-semibold text-[#edf0e9]">Sales performance &amp; demand trajectory</h2>
+                  <p className="mt-1 text-[10px] text-[#858d80]">Actual sales compared with the illustrative forecast horizon</p>
+                </div>
+                <div className="flex rounded-xl border border-[#343a33] bg-[#1b1f1c] p-1">
+                  {["Daily", "Weekly", "Monthly"].map((item) => (
+                    <button key={item} onClick={() => setPeriod(item)} className={`rounded-lg px-3 py-2 text-[10px] transition ${period === item ? "bg-[#343d31] text-[#e3e9dc]" : "text-[#92998d] hover:text-white"}`}>
+                      {item}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </article>
+              <SalesChart period={period} />
+              <div className="mt-5 grid gap-4 border-t border-[#303530] pt-4 sm:grid-cols-3">
+                <div><p className="text-[9px] tracking-wider text-[#858d80]">PERIOD HIGH</p><p className="mt-1 text-[17px] font-medium text-[#e8ebe4]">₹2.84L</p></div>
+                <div><p className="text-[9px] tracking-wider text-[#858d80]">AVERAGE DAILY SALES</p><p className="mt-1 text-[17px] font-medium text-[#e8ebe4]">₹82.6K</p></div>
+                <div><p className="text-[9px] tracking-wider text-[#858d80]">FORECAST DELTA</p><p className="mt-1 text-[17px] font-medium text-[#a9b89a]">+8.2%</p></div>
+              </div>
+            </Panel>
+
+            <Panel className="p-5 sm:p-6 2xl:col-span-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[.13em] text-[#a9b89a]">02 / AI OVERVIEW</p>
+                  <h2 className="mt-2 font-semibold text-[#edf0e9]">StockSense AI brief</h2>
+                </div>
+                <span className="flex items-center gap-1 rounded-lg border border-[#41483d] px-2.5 py-1.5 text-[9px] text-[#b6c3a9]"><Sparkles size={11} /> INSIGHTS</span>
+              </div>
+              <p className="mt-3 text-[10px] leading-5 text-[#9ca397]">A concise view of demand movement, inventory cover and supplier signals.</p>
+              <div className="mt-4 rounded-2xl border border-[#303630] bg-[#121613] p-4">
+                <div className="flex items-center justify-between gap-2 text-[9px]">
+                  <span className="text-[#b6c3a9]">● ACTIVE SIGNAL · FMCG</span>
+                  <span className="text-[#777e75]">Updated just now</span>
+                </div>
+                <h3 className="mt-3 text-[15px] font-semibold leading-6 text-[#eef0eb]">Weekend demand is building across essential categories.</h3>
+                <p className="mt-2 text-[10px] leading-5 text-[#9ca397]">The sample model indicates a stronger replenishment requirement for dairy and packaged staples.</p>
+                <div className="mt-4 space-y-3">
+                  <div className="flex gap-2.5"><TrendingUp size={14} className="mt-0.5 shrink-0 text-[#a9b89a]" /><p className="text-[10px] leading-5 text-[#aeb4a9]"><b className="text-[#e2e6de]">Dairy demand:</b> sample trajectory up 22%; review short supplier lead times.</p></div>
+                  <div className="flex gap-2.5"><Boxes size={14} className="mt-0.5 shrink-0 text-[#a9b89a]" /><p className="text-[10px] leading-5 text-[#aeb4a9]"><b className="text-[#e2e6de]">Inventory cover:</b> two sample SKUs sit below reorder threshold.</p></div>
+                  <div className="flex gap-2.5"><ShieldCheck size={14} className="mt-0.5 shrink-0 text-[#a9b89a]" /><p className="text-[10px] leading-5 text-[#aeb4a9]"><b className="text-[#e2e6de]">Action:</b> validate supplier availability before drafting purchase orders.</p></div>
+                </div>
+              </div>
+              <button onClick={() => runAction("AI insight review")} className="mt-3 flex w-full items-center justify-between rounded-xl border border-[#3b4238] px-4 py-3 text-[10px] font-medium text-[#c3cdb8] transition hover:bg-[#242a22]">
+                REVIEW FULL BRIEF <ArrowUpRight size={14} />
+              </button>
+            </Panel>
           </section>
 
-          <section className="relative overflow-hidden rounded-2xl border border-teal-300/15 bg-linear-to-r from-[#122b35] via-[#142536] to-[#111a2b] p-5 sm:p-6">
-            <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full bg-teal-300/10 blur-3xl" />
-            <div className="relative"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-teal-300 text-[#062522]"><Sparkles size={18} /></span><div><h2 className="font-semibold text-white">AI demand horizon · next 7 days</h2><p className="text-xs text-slate-400">Illustrative forecast insight</p></div></div><span className="rounded-full bg-emerald-300/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-200">Sample confidence: 99.4%</span></div>
-              <p className="mt-5 max-w-4xl text-lg leading-relaxed text-slate-200">Demand for high-velocity <strong className="text-teal-200">FMCG & dairy staples</strong> is forecast to rise by <strong className="text-emerald-300">16.4%</strong> over the upcoming weekend window.</p>
-              <div className="mt-5 grid gap-3 md:grid-cols-3">{[["Dairy & fresh foods","+22% demand velocity",Truck],["Edible oils & grains","+14% steady run rate",Boxes],["Snacks & confectionery","+19% basket presence",Package]].map(([name, stat, Icon]) => { const ItemIcon = Icon as typeof Truck; return <div key={name as string} className="flex items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-3"><ItemIcon size={19} className="text-teal-200" /><div><p className="text-xs font-semibold text-white">{name as string}</p><p className="mt-1 text-xs text-emerald-300">{stat as string}</p></div></div>; })}</div>
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><p className="flex items-center gap-2 text-xs text-slate-400"><Check size={15} className="text-teal-200" />4 sample purchase orders drafted for review.</p><button onClick={() => runAction("Forecast inspection")} className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10">Inspect forecast <ArrowRight size={14} className="ml-1 inline" /></button></div>
-            </div>
+          <section className="grid gap-4 lg:grid-cols-12">
+            <Panel className="p-5 sm:p-6 lg:col-span-7">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[.13em] text-[#a9b89a]">03 / INVENTORY</p>
+                  <h2 className="mt-2 font-semibold text-[#edf0e9]">Stock health &amp; allocation</h2>
+                  <p className="mt-1 text-[10px] text-[#858d80]">Illustrative distribution across 1,420 sample SKUs</p>
+                </div>
+                <span className="text-[9px] text-[#858d80]">ALL LOCATIONS <ChevronDown size={11} className="inline" /></span>
+              </div>
+              <div className="mt-6 grid gap-6 sm:grid-cols-[1fr_1.3fr] sm:items-center">
+                <div className="relative mx-auto grid h-40 w-40 place-items-center rounded-full" style={{ background: "conic-gradient(#a9b89a 0 72%, #b39a70 72% 88%, #a87568 88% 95%, #394238 95% 100%)" }}>
+                  <div className="grid h-28 w-28 place-items-center rounded-full bg-[#171917] text-center">
+                    <div><p className="text-2xl font-semibold text-[#edf0e9]">1,420</p><p className="text-[9px] tracking-widest text-[#858d80]">TOTAL SKUS</p></div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {[["In stock", "1,022", "72%", "#a9b89a"], ["Low stock", "227", "16%", "#b39a70"], ["Out of stock", "99", "7%", "#a87568"], ["Overstocked", "72", "5%", "#65705e"]].map(([name, count, pct, color]) => (
+                    <div key={name}>
+                      <div className="mb-1.5 flex justify-between text-[10px]"><span className="text-[#aeb4a9]">{name}</span><span className="text-[#e1e5dc]">{count}<span className="ml-2 text-[#858d80]">{pct}</span></span></div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[#303630]"><div className="h-full rounded-full" style={{ width: pct, background: color }} /></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Panel>
+
+            <Panel className="p-5 sm:p-6 lg:col-span-5">
+              <div className="flex items-start justify-between">
+                <div><p className="text-[10px] font-semibold tracking-[.13em] text-[#a9b89a]">04 / DEMAND OUTLOOK</p><h2 className="mt-2 font-semibold text-[#edf0e9]">Next 7-day velocity</h2></div>
+                <span className="rounded-lg bg-[#252b24] px-2.5 py-1.5 text-[9px] text-[#b6c3a9]">SAMPLE MODEL</span>
+              </div>
+              <div className="mt-6 flex items-end justify-between gap-4">
+                <div><p className="text-3xl font-semibold tracking-tight text-[#edf0e9]">+16.4%</p><p className="mt-1 text-[10px] text-[#858d80]">Expected demand movement</p></div>
+                <div className="w-[48%]"><MiniBars /></div>
+              </div>
+              <div className="mt-6 space-y-3 border-t border-[#303630] pt-4">
+                {[["Dairy & fresh foods", "+22%"], ["Edible oils & grains", "+14%"], ["Snacks & confectionery", "+19%"]].map(([name, value]) => (
+                  <div key={name} className="flex justify-between text-[10px]"><span className="text-[#aeb4a9]">{name}</span><b className="font-medium text-[#b6c3a9]">{value}</b></div>
+                ))}
+              </div>
+            </Panel>
           </section>
 
-          <section className="rounded-2xl border border-white/6 bg-[#111a2b] p-5 shadow-lg sm:p-6" id="stock-alerts">
-            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center"><div><div className="flex flex-wrap items-center gap-2"><h2 className="font-semibold text-white">Stockout vulnerability & reorder queue</h2><span className="rounded-full bg-rose-400/10 px-2.5 py-1 text-[10px] font-bold text-rose-300">8 sample alerts</span></div><p className="mt-1 text-xs text-slate-500">Review products that may need replenishment.</p></div>
-              <div className="flex flex-wrap items-center gap-2"><label className="relative md:hidden"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search SKU..." className="h-9 w-40 rounded-lg border border-white/10 bg-black/20 pl-8 pr-2 text-xs outline-none focus:border-teal-300/40" /></label><div className="flex rounded-lg bg-black/20 p-1">{["All", "Critical", "Warning", "Healthy"].map((f) => <button key={f} onClick={() => setFilter(f)} className={`rounded-md px-2.5 py-1.5 text-[11px] ${filter === f ? "bg-white/10 font-semibold text-teal-200" : "text-slate-500 hover:text-white"}`}>{f}</button>)}</div><button onClick={exportCsv} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-400 hover:bg-white/5" title="Export CSV"><Download size={15} /></button></div>
+          <Panel className="p-5 sm:p-6" >
+            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[.13em] text-[#a9b89a]">05 / ACTION QUEUE</p>
+                <h2 className="mt-2 font-semibold text-[#edf0e9]">Stock vulnerability &amp; reorder monitor</h2>
+                <p className="mt-1 text-[10px] text-[#858d80]">Review sample products that may need replenishment.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="relative md:hidden">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#858d80]" />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search SKU" className="h-9 w-32 rounded-xl border border-[#343a33] bg-[#1b1f1c] pl-8 pr-2 text-[10px] outline-none focus:border-[#78866e]" />
+                </label>
+                <div className="flex rounded-xl border border-[#343a33] bg-[#1b1f1c] p-1">
+                  {["All", "Critical", "Warning", "Healthy"].map((value) => (
+                    <button key={value} onClick={() => setFilter(value)} className={`rounded-lg px-2.5 py-2 text-[9px] transition ${filter === value ? "bg-[#343d31] text-[#e3e9dc]" : "text-[#a2a89e] hover:text-white"}`}>{value}</button>
+                  ))}
+                </div>
+                <button onClick={exportCsv} className="grid h-9 w-9 place-items-center rounded-xl border border-[#343a33] text-[#aeb8a4] transition hover:bg-[#252a24]" title="Export CSV"><Download size={14} /></button>
+              </div>
             </div>
-            <div className="mt-5 overflow-x-auto"><table className="w-full min-w-212.5 text-left text-xs"><thead><tr className="border-b border-white/7 text-[10px] uppercase tracking-wider text-slate-500"><th className="pb-3 pr-4 font-semibold">Product</th><th className="pb-3 pr-4 font-semibold">SKU</th><th className="pb-3 pr-4 font-semibold">Current stock</th><th className="pb-3 pr-4 font-semibold">Threshold</th><th className="pb-3 pr-4 font-semibold">Vendor</th><th className="pb-3 pr-4 font-semibold">Stockout ETA</th><th className="pb-3 text-right font-semibold">Action</th></tr></thead><tbody>{filteredItems.map((item) => <tr key={item.sku} className="border-b border-white/5 last:border-0 hover:bg-white/2"><td className="py-4 pr-4"><p className="font-semibold text-slate-200">{item.name}</p><p className="mt-1 text-[11px] text-slate-500">{item.category}</p></td><td className="py-4 pr-4 font-mono text-slate-400">{item.sku}</td><td className="py-4 pr-4"><span className={item.status === "Critical" ? "font-semibold text-rose-300" : item.status === "Warning" ? "font-semibold text-amber-300" : "font-semibold text-emerald-300"}>{item.stock} units</span><div className="mt-1 h-1 w-20 overflow-hidden rounded-full bg-white/10"><div className={`h-full rounded-full ${item.status === "Critical" ? "bg-rose-400" : item.status === "Warning" ? "bg-amber-300" : "bg-emerald-300"}`} style={{ width: `${Math.min(100, item.stock / item.threshold * 100)}%` }} /></div></td><td className="py-4 pr-4 text-slate-400">{item.threshold} units</td><td className="py-4 pr-4 text-slate-400">{item.vendor}</td><td className="py-4 pr-4"><span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${item.status === "Critical" ? "bg-rose-400/10 text-rose-300" : item.status === "Warning" ? "bg-amber-300/10 text-amber-200" : "bg-emerald-300/10 text-emerald-200"}`}>{item.status === "Healthy" ? "Healthy" : `In ${item.eta}`}</span></td><td className="py-4 text-right">{item.status === "Healthy" ? <span className="text-slate-500">No action</span> : <button disabled={busyAction === item.sku} onClick={() => runAction(`Reorder for ${item.sku}`)} className="rounded-lg bg-teal-300 px-3 py-2 text-[11px] font-bold text-[#062522] hover:bg-teal-200 disabled:opacity-60">{busyAction === item.sku ? "Processing..." : `Draft PO (${item.reorder}u)`}</button>}</td></tr>)}</tbody></table>{filteredItems.length === 0 && <p className="py-8 text-center text-sm text-slate-500">No matching products found.</p>}</div>
-            <p className="mt-4 text-[11px] text-slate-500">Showing {filteredItems.length} illustrative records. Connect your inventory API to display live stock data.</p>
-          </section>
 
-          <section><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-semibold text-white">Autonomous intelligence feed</h2><p className="mt-1 text-xs text-slate-500">Example recommendations generated for the demo dashboard.</p></div><span className="text-xs text-teal-200">AI recommendations · Demo</span></div>
-            <div className="grid gap-4 lg:grid-cols-3">
-              {[{title:"Cross-merchandising opportunity",value:"+₹42,000 potential GMV",body:"Customers buying atta may also purchase salt. Test a bundled offer to increase basket size.",icon:TrendingUp,tone:"teal",action:"Review bundle idea"},{title:"Dead stock rebalance",value:"₹1,45,000 tied up",body:"One store may have excess stock while another needs replenishment. Review a transfer before ordering more.",icon:Boxes,tone:"amber",action:"Review transfer"},{title:"Supplier lead-time anomaly",value:"+1.8 days variance",body:"Recent sample deliveries suggest a longer lead time. Consider reviewing safety stock levels.",icon:Truck,tone:"red",action:"Review supplier"}].map((card) => <article key={card.title} className="rounded-2xl border border-white/6 bg-[#111a2b] p-5"><div className="flex items-center justify-between"><span className={`grid h-10 w-10 place-items-center rounded-xl ${card.tone === "teal" ? "bg-teal-300/10 text-teal-200" : card.tone === "amber" ? "bg-amber-300/10 text-amber-200" : "bg-rose-400/10 text-rose-300"}`}><card.icon size={19} /></span><span className="text-xs font-semibold text-teal-200">{card.value}</span></div><h3 className="mt-4 font-semibold text-white">{card.title}</h3><p className="mt-2 min-h-16 text-xs leading-5 text-slate-400">{card.body}</p><button onClick={() => runAction(card.action)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-2.5 text-xs font-semibold text-slate-200 hover:bg-white/10">{card.action}<ArrowRight size={14} /></button></article>)}
+            <div className="mt-5 overflow-x-auto">
+              <table className="w-full min-w-190 text-left text-[10px]">
+                <thead><tr className="border-b border-[#343a33] text-[9px] tracking-wider text-[#858d80]">
+                  <th className="pb-3 pr-4 font-medium">PRODUCT</th><th className="pb-3 pr-4 font-medium">SKU</th><th className="pb-3 pr-4 font-medium">ON HAND</th><th className="pb-3 pr-4 font-medium">THRESHOLD</th><th className="pb-3 pr-4 font-medium">SUPPLIER</th><th className="pb-3 pr-4 font-medium">STATUS / ETA</th><th className="pb-3 text-right font-medium">ACTION</th>
+                </tr></thead>
+                <tbody>
+                  {filteredItems.map((item) => (
+                    <tr key={item.sku} className="border-b border-[#2d322d] last:border-0 transition hover:bg-[#202520]">
+                      <td className="py-4 pr-4"><p className="font-medium text-[#e5e8e1]">{item.name}</p><p className="mt-1 text-[9px] text-[#858d80]">{item.category}</p></td>
+                      <td className="py-4 pr-4 font-mono text-[#aeb4a9]">{item.sku}</td>
+                      <td className="py-4 pr-4"><b className={item.status === "Critical" ? "font-medium text-[#c49a78]" : item.status === "Warning" ? "font-medium text-[#c4ae7c]" : "font-medium text-[#a9b89a]"}>{item.stock} units</b><div className="mt-2 h-1 w-16 overflow-hidden rounded-full bg-[#303630]"><div className="h-full rounded-full" style={{ width: `${Math.min(100, (item.stock / item.threshold) * 100)}%`, background: item.status === "Critical" ? "#c49a78" : item.status === "Warning" ? "#c4ae7c" : "#a9b89a" }} /></div></td>
+                      <td className="py-4 pr-4 text-[#aeb4a9]">{item.threshold}</td>
+                      <td className="py-4 pr-4 text-[#aeb4a9]">{item.vendor}</td>
+                      <td className="py-4 pr-4"><span className={item.status === "Critical" ? "text-[#c49a78]" : item.status === "Warning" ? "text-[#c4ae7c]" : "text-[#a9b89a]"}>{item.status === "Healthy" ? "HEALTHY" : `IN ${item.eta}`}</span></td>
+                      <td className="py-4 text-right">{item.status === "Healthy" ? <span className="text-[#65705e]">—</span> : <button disabled={busyAction === item.sku} onClick={() => runAction(`Reorder for ${item.sku}`)} className="rounded-lg border border-[#485044] px-3 py-2 text-[9px] font-medium text-[#c3cdb8] transition hover:bg-[#343d31] disabled:opacity-50">{busyAction === item.sku ? "WORKING" : `DRAFT PO · ${item.reorder}U`}</button>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredItems.length === 0 && <p className="py-8 text-center text-[10px] text-[#858d80]">No matching products found.</p>}
             </div>
-          </section>
-          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-white/6 py-4 text-[11px] text-slate-600"><span>StockSense · Retail intelligence workspace</span><span>Dashboard UI preview · Sample data, not live business metrics</span></footer>
+            <p className="mt-3 text-[9px] text-[#777e75]">Showing {filteredItems.length} illustrative records. Connect the inventory API to display live stock data.</p>
+          </Panel>
+
+          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-[#303330] py-4 text-[9px] tracking-wide text-[#777e75]">
+            <span>STOCKSENSE · RETAIL INTELLIGENCE</span>
+            <span>DEMO ENVIRONMENT · SAMPLE DATA · NOT LIVE BUSINESS METRICS</span>
+          </footer>
         </main>
       </div>
     </div>
