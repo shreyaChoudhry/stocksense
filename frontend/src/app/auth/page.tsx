@@ -136,11 +136,10 @@ export default function AuthHubPage() {
             })}
           </div>
         </section>
-
-        <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-6 text-xs text-slate-600">
-          <span>© {new Date().getFullYear()} StockSense</span>
-          <span>Authentication page directory</span>
-        </footer>
+<footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-6 text-xs text-slate-600">
+  <span>© 2026 StockSense</span>
+  <span>Authentication page directory</span>
+</footer>
       </div>
     </main>
   );
