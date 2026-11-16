@@ -5,7 +5,7 @@ from app.auth import get_current_user
 from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
-
+from app.tenancy import get_current_business
 
 app = FastAPI(
     title="StockSense API",
@@ -57,4 +57,12 @@ def get_me(current_user: dict = Depends(get_current_user)):
     return {
         "message": "Authentication successful",
         "user": current_user
+    }
+@app.get("/auth/me/business")
+def get_my_business(
+    business: dict = Depends(get_current_business),
+):
+    return {
+        "message": "Business access verified",
+        "business": business,
     }
