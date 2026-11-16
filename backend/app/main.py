@@ -1,7 +1,8 @@
 
 from fastapi import FastAPI
 from sqlalchemy import text
-
+from app.auth import get_current_user
+from fastapi import Depends
 from app.database import engine
 
 app = FastAPI(
@@ -43,3 +44,9 @@ def database_health():
             "status": "disconnected",
             "database": "stocksense"
         }
+@app.get("/auth/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return {
+        "message": "Authentication successful",
+        "user": current_user
+    }
