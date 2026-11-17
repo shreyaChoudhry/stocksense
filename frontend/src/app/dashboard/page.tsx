@@ -48,6 +48,7 @@ const stockItems: StockItem[] = [
 
 const navigation = [
   { label: "Overview", icon: LayoutDashboard },
+  { label: "Product Management", icon: Package },
   { label: "Sales Analytics", icon: TrendingUp },
   { label: "Inventory Management", icon: Package },
   { label: "Demand Forecasting", icon: Activity },
@@ -243,8 +244,15 @@ export default function DashboardPage() {
           <button
             key={label}
             onClick={() => {
-              setActiveNav(label);
               setMobileOpen(false);
+
+              if (label === "Product Management") {
+                setActiveNav(label);
+                router.push("/dashboard/products");
+                return;
+              }
+
+              setActiveNav(label);
               if (label !== "Overview") setNotice(`${label} is a preview section. Overview remains the active dashboard.`);
             }}
             className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-[12px] transition ${
