@@ -6,7 +6,7 @@ from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app.tenancy import get_current_business
-
+from app.routers.products import router as products_router
 app = FastAPI(
     title="StockSense API",
     description="Backend API for StockSense inventory intelligence platform",
@@ -19,6 +19,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(products_router)
 
 @app.get("/")
 def root():
