@@ -26,6 +26,7 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [showInactive, setShowInactive] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     sku: "",
@@ -87,8 +88,8 @@ export default function ProductsPage() {
     try {
       setSaving(true);
       setMessage("");
-      await request("/products/", {
-        method: "POST",
+      await request(editingId ? `/products/${editingId}` : "/products/", {
+        method: editingId ? "PATCH" : "POST",
         body: JSON.stringify({
           ...form,
           cost_price: form.cost_price ? Number(form.cost_price) : null,
@@ -103,13 +104,27 @@ export default function ProductsPage() {
         cost_price: "",
         selling_price: "",
       });
-      setMessage("Product added successfully.");
+      setMessage(editingId ? "Product updated successfully." : "Product added successfully.");
+      setEditingId(null);
       await loadProducts();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not add product.");
     } finally {
       setSaving(false);
     }
+  }
+
+  function editProduct(product: Product) {
+    setEditingId(product.id);
+    setForm({
+      sku: product.sku,
+      name: product.name,
+      category: product.category || "",
+      unit: product.unit,
+      cost_price: product.cost_price || "",
+      selling_price: product.selling_price || "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function deactivateProduct(id: string) {
@@ -154,7 +169,7 @@ export default function ProductsPage() {
         )}
 
         <section className="rounded-2xl border border-[#2b302b] bg-[#171a18] p-5">
-          <h2 className="mb-4 text-lg font-semibold !tracking-normal leading-tight">Add a product</h2>
+          <h2 className="mb-4 text-lg font-semibold !tracking-normal leading-tight">{editingId ? "Edit product" : "Add a product"}</h2>
           <form onSubmit={addProduct} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <input className={inputClass} placeholder="SKU (e.g. SKU-001)" required maxLength={80}
               value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
@@ -169,8 +184,16 @@ export default function ProductsPage() {
             <input className={inputClass} type="number" min="0" step="0.01" placeholder="Selling price"
               value={form.selling_price} onChange={(e) => setForm({ ...form, selling_price: e.target.value })} />
             <button disabled={saving} className="rounded-xl bg-[#b5c2a8] px-5 py-3 text-sm font-semibold text-[#182017] hover:bg-[#c2cdb7] disabled:opacity-50 sm:col-span-2 lg:col-span-3">
-              {saving ? "Saving..." : "+ Add product"}
+              {saving ? "Saving..." : editingId ? "Update product" : "+ Add product"}
             </button>
+            {editingId && (
+              <button type="button" onClick={() => {
+                setEditingId(null);
+                setForm({ sku: "", name: "", category: "", unit: "piece", cost_price: "", selling_price: "" });
+              }} className="rounded-xl border border-[#485044] px-5 py-3 text-sm text-[#c3cdb8]">
+                Cancel edit
+              </button>
+            )}
           </form>
         </section>
 
@@ -223,12 +246,18 @@ export default function ProductsPage() {
                         </span>
                       </td>
                       <td className="py-4 text-right">
-                        {product.is_active && (
-                          <button onClick={() => void deactivateProduct(product.id)}
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => editProduct(product)}
                             className="rounded-lg border border-[#485044] px-3 py-2 text-xs text-[#c3cdb8] hover:bg-[#343d31]">
-                            Deactivate
+                            Edit
                           </button>
-                        )}
+                          {product.is_active && (
+                            <button onClick={() => void deactivateProduct(product.id)}
+                              className="rounded-lg border border-[#485044] px-3 py-2 text-xs text-[#c3cdb8] hover:bg-[#343d31]">
+                              Deactivate
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
